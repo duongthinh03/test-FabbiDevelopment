@@ -3,6 +3,12 @@
 import pytest
 from httpx import AsyncClient
 
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import select
+
+from app.models.todo import Todo
+from app.models.user import User
 
 @pytest.mark.asyncio
 async def test_toggle_completed_back_to_false(client: AsyncClient):
@@ -65,6 +71,44 @@ async def test_create_todo(client: AsyncClient):
     assert data["description"] == "A test todo item"
     assert data["completed"] is False
 
+@pytest.mark.asyncio
+async def test_list_todos_orders_newest_first(
+    client: AsyncClient,
+    db_session,
+):
+    email = "ordered@example.com"
+    token = await get_auth_token(client, email)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    result = await db_session.execute(
+        select(User).where(User.email == email)
+    )
+    user = result.scalar_one()
+
+    now = datetime.now(timezone.utc)
+    db_session.add_all(
+        [
+            Todo(
+                title="Older todo",
+                user_id=user.id,
+                created_at=now - timedelta(minutes=2),
+                updated_at=now - timedelta(minutes=2),
+            ),
+            Todo(
+                title="Newer todo",
+                user_id=user.id,
+                created_at=now - timedelta(minutes=1),
+                updated_at=now - timedelta(minutes=1),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/todos", headers=headers)
+
+    assert response.status_code == 200
+    titles = [todo["title"] for todo in response.json()["items"]]
+    assert titles == ["Newer todo", "Older todo"]
 
 @pytest.mark.asyncio
 async def test_get_todos(client: AsyncClient):
