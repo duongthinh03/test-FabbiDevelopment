@@ -34,7 +34,7 @@ async def list_todos(
     """Get paginated list of todos."""
     skip = (page - 1) * size
 
-    cache_key = "todos:list"
+    cache_key = f"todos:list:{current_user.id}:page:{page}:size:{size}"
 
     # Try to get from cache
     cached = await redis.get(cache_key)
@@ -120,7 +120,7 @@ async def update_existing_todo(
 
     update_data = todo_data.model_dump()
 
-    if todo_data.completed:
+    if todo_data.completed is not None:
         todo.completed = todo_data.completed
 
     # Apply other updates
@@ -131,6 +131,8 @@ async def update_existing_todo(
 
     updated_todo = await update_todo(db, todo, {})
 
+    await redis.delete_pattern(f"todos:list:{current_user.id}:*")
+    
     return updated_todo
 
 

@@ -4,6 +4,42 @@ import pytest
 from httpx import AsyncClient
 
 
+@pytest.mark.asyncio
+async def test_toggle_completed_back_to_false(client: AsyncClient):
+    token = await get_auth_token(client, "toggle@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    created = await client.post(
+        "/api/v1/todos",
+        json={"title": "Toggle me"},
+        headers=headers,
+    )
+    todo_id = created.json()["id"]
+
+    completed = await client.put(
+        f"/api/v1/todos/{todo_id}",
+        json={"completed": True},
+        headers=headers,
+    )
+    assert completed.status_code == 200
+    assert completed.json()["completed"] is True
+
+    reopened = await client.put(
+        f"/api/v1/todos/{todo_id}",
+        json={"completed": False},
+        headers=headers,
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()["completed"] is False
+
+    saved = await client.get(
+    f"/api/v1/todos/{todo_id}",
+    headers=headers,
+)
+
+    assert saved.status_code == 200
+    assert saved.json()["completed"] is False
+
 async def get_auth_token(client: AsyncClient, email: str = "todo@example.com") -> str:
     """Helper to register and get auth token."""
     response = await client.post(
