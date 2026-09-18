@@ -28,7 +28,6 @@ async def get_todos(
     limit: int = 20,
 ) -> tuple[list[Todo], int]:
     """Get all todos with pagination for a specific user."""
-    # query = select(Todo).where(Todo.user_id == user_id).offset(skip).limit(limit)
     query = (
         select(Todo)
         .where(Todo.user_id == user_id)
@@ -50,14 +49,14 @@ async def get_todo_by_id(
     db: AsyncSession,
     todo_id: uuid.UUID,
     user_id: uuid.UUID,
-    ) -> Todo | None:
-        result = await db.execute(
-            select(Todo).where(
-                Todo.id == todo_id,
-                Todo.user_id == user_id,
-            )
+) -> Todo | None:
+    result = await db.execute(
+        select(Todo).where(
+            Todo.id == todo_id,
+            Todo.user_id == user_id,
         )
-        return result.scalar_one_or_none()
+    )
+    return result.scalar_one_or_none()
 
 
 async def update_todo(db: AsyncSession, todo: Todo, update_data: dict) -> Todo:
