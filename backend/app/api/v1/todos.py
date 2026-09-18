@@ -77,11 +77,13 @@ async def list_todos(
 @router.post("", response_model=TodoResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_todo(
     todo_data: TodoCreate,
+    redis: RedisClient = Depends(get_redis),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new todo item."""
     todo = await create_todo(db, todo_data, current_user.id)
+    await redis.delete_pattern(f"todos:list:{current_user.id}:*")
     return todo
 
 
@@ -118,7 +120,9 @@ async def update_existing_todo(
             detail="Todo not found",
         )
 
-    update_data = todo_data.model_dump()
+    # update_data = todo_data.model_dump()
+
+    update_data = todo_data.model_dump(exclude_unset=True)
 
     if todo_data.completed is not None:
         todo.completed = todo_data.completed
@@ -152,5 +156,6 @@ async def delete_existing_todo(
         )
 
     await delete_todo(db, todo)
+    await redis.delete_pattern(f"todos:list:{current_user.id}:*")
 
     return None

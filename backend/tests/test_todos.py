@@ -200,3 +200,34 @@ async def test_get_single_todo(client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Single Todo"
+
+@pytest.mark.asyncio
+async def test_title_update_preserves_description(client: AsyncClient):
+    token = await get_auth_token(client, "partial@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    created = await client.post(
+        "/api/v1/todos",
+        json={
+            "title": "Original title",
+            "description": "Keep this description",
+        },
+        headers=headers,
+    )
+    todo_id = created.json()["id"]
+
+    updated = await client.put(
+        f"/api/v1/todos/{todo_id}",
+        json={"title": "Renamed title"},
+        headers=headers,
+    )
+
+    assert updated.status_code == 200
+
+    saved = await client.get(
+        f"/api/v1/todos/{todo_id}",
+        headers=headers,
+    )
+
+    assert saved.json()["title"] == "Renamed title"
+    assert saved.json()["description"] == "Keep this description"
