@@ -42,6 +42,7 @@ export function TodoItem({ todo, onToggle, onEdit, onDelete }: TodoItemProps) {
           size="icon"
           className="h-8 w-8"
           onClick={() => onEdit(todo)}
+          aria-label={`Edit ${todo.title}`}
         >
           <Pencil className="h-3.5 w-3.5" />
         </Button>
@@ -50,6 +51,7 @@ export function TodoItem({ todo, onToggle, onEdit, onDelete }: TodoItemProps) {
           size="icon"
           className="h-8 w-8 text-destructive hover:text-destructive"
           onClick={() => onDelete(todo.id)}
+          aria-label={`Delete ${todo.title}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
