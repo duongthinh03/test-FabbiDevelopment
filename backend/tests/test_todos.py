@@ -231,3 +231,44 @@ async def test_title_update_preserves_description(client: AsyncClient):
 
     assert saved.json()["title"] == "Renamed title"
     assert saved.json()["description"] == "Keep this description"
+
+@pytest.mark.asyncio
+async def test_user_cannot_access_another_users_todo(client: AsyncClient):
+    token_b = await get_auth_token(client, "user-b@example.com")
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+
+    created = await client.post(
+        "/api/v1/todos",
+        json={"title": "Private todo"},
+        headers=headers_b,
+    )
+    todo_id = created.json()["id"]
+
+    token_a = await get_auth_token(client, "user-a@example.com")
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+
+    read_response = await client.get(
+        f"/api/v1/todos/{todo_id}",
+        headers=headers_a,
+    )
+    assert read_response.status_code == 404
+
+    update_response = await client.put(
+        f"/api/v1/todos/{todo_id}",
+        json={"title": "Hijacked todo"},
+        headers=headers_a,
+    )
+    assert update_response.status_code == 404
+
+    delete_response = await client.delete(
+        f"/api/v1/todos/{todo_id}",
+        headers=headers_a,
+    )
+    assert delete_response.status_code == 404
+
+    owner_response = await client.get(
+        f"/api/v1/todos/{todo_id}",
+        headers=headers_b,
+    )
+    assert owner_response.status_code == 200
+    assert owner_response.json()["title"] == "Private todo"
